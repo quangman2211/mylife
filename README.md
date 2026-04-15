@@ -245,3 +245,10 @@ Mỗi Chủ Nhật, anh mở Google Sheet xem 5 số:
 ---
 
 *"Lần này không phải chạy nhanh hơn, mà là chạy thông minh hơn."*
+
+---
+
+## Playbooks chi tiết
+
+- [Playbook 01: Design Engine bằng AI](playbooks/01-design-engine-ai.md) — workflow Midjourney/Ideogram/Kittl, batch processing, prompt library
+- [Playbook 02: Research Niche Premium](playbooks/02-niche-research-premium.md) — framework 5 bước, 10 niche ideas vetted, validation checklist
