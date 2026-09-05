@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Postgres THẬT, không phải SQLite.
+    # Test cách ly tenant dựa vào Row Level Security — thứ SQLite không có.
+    # Chạy CI trên một DB khác production là tự lừa mình: bộ test sẽ xanh
+    # mà không kiểm tra đúng cái cần kiểm tra.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install pydantic pytest "psycopg[binary]"
+
+      # -r s: LIỆT KÊ RÕ test bị bỏ qua kèm lý do.
+      # Không có cờ này, 3 gạch còn lại của Q5.4 sẽ lặng lẽ nằm im mãi mãi.
+      # Việc chưa làm phải NHÌN THẤY ĐƯỢC ở mỗi lần chạy.
+      - run: pytest -q -r s

@@ -17,15 +17,20 @@ tiếng Việt trên dữ liệu thật.
 | T3 Hợp đồng dữ liệu | ✅ xong (25 test xanh) |
 | Adapter giả | ✅ xong |
 | Bộ test hợp đồng | ✅ xong |
-| T2 Kho chuẩn hoá + cách ly tenant | ⬜ tiếp theo |
-| T4 Lõi agent | ⬜ |
+| T2 Kho chuẩn hoá + cách ly tenant | ✅ xong (27 test tấn công) |
+| T4 Lõi agent | ⬜ tiếp theo |
 | Adapter KiotViet | 🔒 bị Q0.1 chặn |
 
 ## Chạy thử
 
 ```bash
-pip install pydantic pytest
-python -m pytest -q          # 25 test
+pip install pydantic pytest "psycopg[binary]"
+
+# Test cách ly tenant cần Postgres THẬT (RLS — SQLite không có).
+# Thiếu Postgres thì nhóm test đó tự bỏ qua, phần còn lại vẫn chạy.
+export PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=postgres
+
+python -m pytest -q -r s     # 52 test (3 bỏ qua có lý do)
 ```
 
 ## Cấu trúc
@@ -41,10 +46,32 @@ src/retailops/
     base.py                   interface mọi adapter phải theo
   adapters/
     fake.py                   nguồn giả trong bộ nhớ (gỡ thế bí Q0.1)
+  db/                       ★ T2 — cách ly đa khách hàng
+    schema.sql                bảng + Row Level Security
+    tenancy.py                shop_scope() — SET LOCAL, không phải SET
+    repository.py             đường DUY NHẤT chạm dữ liệu
 tests/
   contract_suite.py         ★ test dùng chung cho MỌI adapter
   test_fake_adapter.py        4 dòng — kế thừa là có đủ test
+  test_tenant_isolation.py  ★ 27 test CỐ TÌNH TẤN CÔNG chéo shop
 ```
+
+## Cách ly đa khách hàng — bốn lớp
+
+Chung bảng + Row Level Security (**không** phải schema-per-tenant —
+xem ADR-0002 để biết vì sao sửa lại blueprint §6.3).
+
+| Lớp | Cơ chế | Dev mệt phá được? |
+|---|---|---|
+| 1. Schema | `shop_id NOT NULL`, PK/FK gộp `shop_id` | Được |
+| 2. Repository | Nhận `ShopScope`, không nhận `Connection` | Được |
+| 3. **RLS** | **Postgres từ chối** | **Không** |
+| 4. Test tấn công | 27 test, chạy mỗi lần push | Không (đỏ CI) |
+
+Lớp 1–2 chỉ để lỗi nổ sớm. **Lớp 3 là lớp thật.**
+
+> 🔴 **Không nhận khách thứ hai trước khi `test_tenant_isolation.py` xanh toàn bộ.**
+> (Q5.4 — rủi ro R1, rủi ro duy nhất có thể chấm dứt công ty.)
 
 ## Sáu tầng (blueprint §5.2)
 
